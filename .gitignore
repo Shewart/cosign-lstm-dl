@@ -1,0 +1,43 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage and build artifacts
+coverage/
+build/
+dist/
+node_modules/
+.jspm_packages/
+web_modules/
+.next/
+.nuxt/
+out/
+.cache/
+.parcel-cache/
+.temp/
+.docusaurus/
+.serverless/
+.fusebox/
+.dynamodb/
+.vscode-test/
+.yarn/
+
+# Python-specific
+model-env/
+__pycache__/
+*.pyc
+*.pkl
