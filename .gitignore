@@ -41,3 +41,5 @@ model-env/
 __pycache__/
 *.pyc
 *.pkl
+data/
+
