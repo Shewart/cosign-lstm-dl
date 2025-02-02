@@ -8,10 +8,10 @@ def create_lstm_model(input_shape, num_classes):
     
     Parameters:
         input_shape (tuple): Shape of the input data (time_steps, features)
-        num_classes (int): Number of classification categories
+        num_classes (int): Number of classification categories.
 
     Returns:
-        model (tf.keras.Model): Compiled LSTM model
+        model (tf.keras.Model): Compiled LSTM model.
     """
     model = Sequential([
         LSTM(128, return_sequences=True, activation='relu', input_shape=input_shape),
@@ -19,7 +19,7 @@ def create_lstm_model(input_shape, num_classes):
         LSTM(64, return_sequences=False),
         Dropout(0.2),
         Dense(64, activation='relu'),
-        Dense(num_classes, activation='softmax')
+        Dense(num_classes, activation='softmax')  # Dynamically set num_classes
     ])
     
     model.compile(
@@ -31,9 +31,9 @@ def create_lstm_model(input_shape, num_classes):
     return model
 
 if __name__ == "__main__":
-    # Example input shape (sequence_length, num_features)
+    # Example input shape: (sequence_length, num_features)
     INPUT_SHAPE = (30, 1662)  # Assuming 1662 features from MediaPipe
-    NUM_CLASSES = 10  # Adjust based on actual number of signs
+    NUM_CLASSES = 30  # Placeholder, actual num_classes will be determined in train.py
 
     model = create_lstm_model(INPUT_SHAPE, NUM_CLASSES)
     model.summary()

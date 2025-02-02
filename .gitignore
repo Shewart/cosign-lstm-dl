@@ -43,3 +43,6 @@ __pycache__/
 *.pkl
 data/
 
+models/*.h5
+models/*.keras
+
