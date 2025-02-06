@@ -1,101 +1,124 @@
+"""
+predict.py
+----------
+This script loads the trained LSTM model and performs real-time sign language prediction using 
+Mediapipe for keypoint extraction from webcam frames.
+"""
+
+import os
+import sys
+import time
 import numpy as np
 import tensorflow as tf
 import cv2
 import mediapipe as mp
-from data_preprocessing import extract_keypoints
-import time
+from data_preprocessing import extract_keypoints  # Ensure this function is defined properly
 
-# Load trained model
-MODEL_PATH = "models/lstm_model.keras"  # Ensure this matches your save format
-try:
-    model = tf.keras.models.load_model(MODEL_PATH)
-    print("✅ Model loaded successfully!")
-except Exception as e:
-    print("❌ ERROR: Could not load model:", e)
-    exit()
+def initialize_model(model_path="models/lstm_model.keras"):
+    try:
+        model = tf.keras.models.load_model(model_path)
+        print("✅ Model loaded successfully!")
+        return model
+    except Exception as e:
+        print("❌ ERROR: Could not load model:", e)
+        sys.exit(1)
 
-# Load class labels (placeholder names for 30 classes)
-actions = [f"Sign {i}" for i in range(30)]
+def initialize_mediapipe():
+    mp_holistic = mp.solutions.holistic
+    mp_drawing = mp.solutions.drawing_utils
+    holistic = mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    return mp_holistic, mp_drawing, holistic
 
-# Initialize Mediapipe
-mp_holistic = mp.solutions.holistic
-mp_drawing = mp.solutions.drawing_utils
+def open_webcam():
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("❌ ERROR: Could not open webcam")
+        sys.exit(1)
+    print("🎥 Webcam opened successfully!")
+    return cap
 
-# Open webcam
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("❌ ERROR: Could not open webcam")
-    exit()
-print("🎥 Webcam opened successfully!")
+def main():
+    # Initialize
+    model = initialize_model()
+    mp_holistic, mp_drawing, holistic = initialize_mediapipe()
+    cap = open_webcam()
 
-# Create a named window
-cv2.namedWindow('Sign Language Recognition', cv2.WINDOW_NORMAL)
+    # Create a named window (WINDOW_NORMAL allows resizing)
+    cv2.namedWindow('Sign Language Recognition', cv2.WINDOW_NORMAL)
+    
+    # Define action labels (for 30 classes as placeholders)
+    actions = [f"Sign {i}" for i in range(30)]
+    
+    # For building a full sequence of frames
+    sequence_buffer = []
+    SEQUENCE_LENGTH = 30
 
-# Initialize sequence buffer for accumulating frames (for a sequence length of 30)
-sequence_buffer = []
-SEQUENCE_LENGTH = 30
+    print("⏱ Starting prediction loop. Press 'q' to exit.")
 
-with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("❌ ERROR: Failed to grab frame. Exiting...")
-            break
+    try:
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                print("❌ ERROR: Failed to grab frame. Exiting...")
+                break
 
-        # Flip frame horizontally
-        frame = cv2.flip(frame, 1)
+            # Flip and preprocess the frame
+            frame = cv2.flip(frame, 1)
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Convert frame to RGB for Mediapipe processing
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = holistic.process(rgb_frame)
+            # Process frame with Mediapipe
+            results = holistic.process(rgb_frame)
 
-        # Optionally draw landmarks on the frame for visual feedback
-        if results.face_landmarks:
-            mp_drawing.draw_landmarks(frame, results.face_landmarks, mp_holistic.FACEMESH_CONTOURS)
-        if results.pose_landmarks:
-            mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
-        if results.left_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
-        if results.right_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+            # Optional: Draw landmarks for debugging
+            if results.face_landmarks:
+                mp_drawing.draw_landmarks(frame, results.face_landmarks, mp_holistic.FACEMESH_CONTOURS)
+            if results.pose_landmarks:
+                mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+            if results.left_hand_landmarks:
+                mp_drawing.draw_landmarks(frame, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+            if results.right_hand_landmarks:
+                mp_drawing.draw_landmarks(frame, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
-        # Extract keypoints from the current frame (this returns a 1D array)
-        try:
-            keypoints = extract_keypoints(results)
-        except Exception as e:
-            print("❌ ERROR in extract_keypoints:", e)
-            continue
-
-        # Append the keypoints to the sequence buffer
-        sequence_buffer.append(keypoints)
-        # Maintain a fixed sequence length by removing the oldest frame if needed
-        if len(sequence_buffer) > SEQUENCE_LENGTH:
-            sequence_buffer.pop(0)
-
-        # Once we have a full sequence, make a prediction
-        if len(sequence_buffer) == SEQUENCE_LENGTH:
+            # Extract keypoints (should return a 1D array)
             try:
-                # Convert buffer to numpy array and add batch dimension: shape becomes (1, 30, features)
-                input_sequence = np.expand_dims(np.array(sequence_buffer), axis=0)
-                prediction = model.predict(input_sequence)
-                predicted_class = np.argmax(prediction)
-                confidence = np.max(prediction)
-                prediction_text = f"{actions[predicted_class]} ({confidence:.2f})"
-                print("🧠 Prediction:", prediction_text)
-                cv2.putText(frame, prediction_text, (50, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                keypoints = extract_keypoints(results)
             except Exception as e:
-                print("❌ Prediction error:", e)
+                print("❌ Error in extract_keypoints:", e)
+                continue
 
-        # Display the frame
-        cv2.imshow('Sign Language Recognition', frame)
+            # Accumulate keypoints into a sequence buffer
+            sequence_buffer.append(keypoints)
+            if len(sequence_buffer) > SEQUENCE_LENGTH:
+                sequence_buffer.pop(0)
 
-        # Wait for 10ms; if 'q' is pressed, break the loop
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            print("🔴 Exiting...")
-            break
+            # If a full sequence is ready, perform prediction
+            if len(sequence_buffer) == SEQUENCE_LENGTH:
+                try:
+                    input_sequence = np.expand_dims(np.array(sequence_buffer), axis=0)
+                    prediction = model.predict(input_sequence)
+                    predicted_class = np.argmax(prediction)
+                    confidence = np.max(prediction)
+                    prediction_text = f"{actions[predicted_class]} ({confidence:.2f})"
+                    print("🧠 Prediction:", prediction_text)
+                    cv2.putText(frame, prediction_text, (50, 50),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                except Exception as e:
+                    print("❌ Prediction error:", e)
 
-# Release resources and close the window
-cap.release()
-cv2.destroyAllWindows()
-print("✅ Webcam closed successfully.")
+            # Show the frame
+            cv2.imshow('Sign Language Recognition', frame)
+
+            # Wait for a short interval; exit if 'q' is pressed
+            if cv2.waitKey(10) & 0xFF == ord('q'):
+                print("🔴 Exiting prediction loop...")
+                break
+
+    except Exception as e:
+        print("❌ Unexpected error:", e)
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+        print("✅ Webcam closed successfully.")
+
+if __name__ == "__main__":
+    main()
