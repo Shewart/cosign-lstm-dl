@@ -5,9 +5,11 @@ import json
 import numpy as np
 
 # Paths
-DATASET_DIR = "data/wlasl-video/videos"
-OUTPUT_DIR = "data/processed_keypoints"
-ANNOTATIONS_FILE = "data/wlasl-video/WLASL_v0.3.json"
+# Paths
+DATASET_DIR = "I:/wlasl-video/videos"  
+OUTPUT_DIR = "I:/wlasl-video/processed_keypoints"  
+ANNOTATIONS_FILE = "I:/wlasl-video/WLASL_v0.3.json" 
+
 
 # Initialize Mediapipe models
 mp_holistic = mp.solutions.holistic
