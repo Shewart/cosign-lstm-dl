@@ -13,6 +13,9 @@ labels = []
 
 print("📂 Loading data from", DATA_PATH)
 
+# Set the expected feature dimension per frame (e.g., 1629 from our extraction)
+EXPECTED_FEATURES = 1629
+
 # List all .npy files in the processed data folder
 files = [f for f in os.listdir(DATA_PATH) if f.endswith(".npy")]
 print("Found processed files:", files)
@@ -26,20 +29,24 @@ for idx, file in enumerate(files):
     file_path = os.path.join(DATA_PATH, file)
     try:
         seq = np.load(file_path, allow_pickle=True)
-        # Ensure each sequence is a 2D array: (num_frames, features)
+        # Ensure the sequence is a 2D array and its feature dimension matches EXPECTED_FEATURES
         if seq.ndim != 2:
             print(f"Skipping {file}: Expected 2D array but got {seq.ndim}D")
             continue
-        sequences.append(seq.tolist())  # Convert to list for pad_sequences
-        labels.append(idx)  # Dummy label; update this if you have actual labels
+        if seq.shape[1] != EXPECTED_FEATURES:
+            print(f"Skipping {file}: Expected feature dimension {EXPECTED_FEATURES} but got {seq.shape[1]}")
+            continue
+        # Append the sequence as a list for compatibility with pad_sequences
+        sequences.append(seq.tolist())
+        labels.append(idx)  # Dummy label; update this if you have actual labels from dataset metadata
     except Exception as e:
         print(f"Error processing file {file}: {e}")
         continue
 
 print(f"✅ Loaded {len(sequences)} valid sequences for training.")
 
-# Set the target sequence length. You can adjust this value.
-TARGET_SEQUENCE_LENGTH = 50
+# Set the target sequence length (number of frames)
+TARGET_SEQUENCE_LENGTH = 50  # You can adjust this value based on your data
 
 # Determine feature dimension from the first frame of the first sequence
 if sequences and sequences[0]:
@@ -49,8 +56,14 @@ else:
     exit()
 
 # Pad (or truncate) each sequence to the target length.
-# This will convert each sequence to shape (TARGET_SEQUENCE_LENGTH, feature_dim)
-X = pad_sequences(sequences, maxlen=TARGET_SEQUENCE_LENGTH, padding='post', truncating='post', dtype='float32')
+# This converts each sequence to shape (TARGET_SEQUENCE_LENGTH, feature_dim)
+X = pad_sequences(
+    sequences,
+    maxlen=TARGET_SEQUENCE_LENGTH,
+    padding='post',
+    truncating='post',
+    dtype='float32'
+)
 print("Padded sequences shape:", X.shape)
 
 # Convert labels to a numpy array
