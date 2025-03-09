@@ -45,4 +45,5 @@ data/
 
 models/*.h5
 models/*.keras
+.env
 
