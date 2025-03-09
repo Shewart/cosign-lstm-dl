@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate
 
 # Load environment variables from .env file
 load_dotenv()
@@ -10,18 +10,19 @@ class LLM:
     def __init__(self):
         # Initialize the ChatOpenAI model using your API key
         self.llm = ChatOpenAI(
-            model="gpt-4o",  # You can change this to gpt-3.5-turbo or another model if desired
+            model="gpt-3.5-turbo",  # Use "gpt-3.5-turbo" or "gpt-4o" depending on your access
             openai_api_key=os.getenv("OPENAI_API_KEY"),
         )
-        # Define a prompt that instructs the model to convert text to ASL Gloss
+        # Define a prompt template that instructs the model to convert English to ASL Gloss
         self.prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
-                "You are meant to convert text from English to ASL Gloss grammar. Do not change meaning or move periods. I will send you a phrase, please rephrase it to follow ASL grammar order: object, then subject, then verb. Remove words like IS and ARE that are not present in ASL. Replace I with ME. Do not add classifiers. Everything should be in plain English. Output nothing but the rephrased phrase."
+                "You are an expert in ASL grammar. Convert the following sentence into ASL Gloss. "
+                "Keep the meaning, but rephrase it following ASL word order (object, then subject, then verb). "
+                "Remove unnecessary words like 'is' and 'are'. Replace 'I' with 'ME' and do not include articles."
             ),
             ("human", "{transcription}")
         ])
-        # Chain together the prompt and the language model
         self.chain = self.prompt | self.llm
 
     def gloss(self, transcription):
