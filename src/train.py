@@ -1,116 +1,126 @@
 import numpy as np
 import os
 import sys
-from tensorflow.keras.utils import to_categorical
+import json
+from tensorflow.keras.utils import to_categorical, Sequence
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from lstm_model import create_lstm_model
 
-print("🚀 Starting model training...", flush=True)
-
-# Update the data path to your processed keypoints on the external drive
+# Paths
 DATA_PATH = "I:/wlasl-video/processed_keypoints"
-sequences = []
-labels = []
+JSON_PATH = "I:/wlasl-video/WLASL_v0.3.json"
 
-print("📂 Loading data from", DATA_PATH, flush=True)
+print("🚀 Starting training with data generator...")
 
-# Set the expected feature dimension per frame (e.g., 1629 from our extraction)
+# Set expected feature dimension per frame
 EXPECTED_FEATURES = 1629
+TARGET_SEQUENCE_LENGTH = 50  # Desired number of frames per sequence
 
-# List all .npy files in the processed data folder
-files = [f for f in os.listdir(DATA_PATH) if f.endswith(".npy")]
-print("Found processed files:", files, flush=True)
-
-if not files:
-    print("❌ ERROR: No training data found in", DATA_PATH, flush=True)
-    sys.exit(1)
-
-# Load each sequence and assign a dummy label based on file order
-for idx, file in enumerate(files):
-    file_path = os.path.join(DATA_PATH, file)
-    print(f"Loading file {idx+1}/{len(files)}: {file}", flush=True)
-    try:
-        seq = np.load(file_path, allow_pickle=True)
-        # Ensure the sequence is a 2D array and its feature dimension matches EXPECTED_FEATURES
-        if seq.ndim != 2:
-            print(f"Skipping {file}: Expected 2D array but got {seq.ndim}D", flush=True)
-            continue
-        if seq.shape[1] != EXPECTED_FEATURES:
-            print(f"Skipping {file}: Expected feature dimension {EXPECTED_FEATURES} but got {seq.shape[1]}", flush=True)
-            continue
-        # Try converting the sequence to a numpy array with dtype float32
-        try:
-            np_seq = np.asarray(seq, dtype='float32')
-        except MemoryError as me:
-            print(f"Skipping {file} due to memory error: {me}", flush=True)
-            continue
-        sequences.append(np_seq.tolist())  # Convert back to list for pad_sequences
-        labels.append(idx)  # Dummy label; update if you have actual labels
-    except Exception as e:
-        print(f"Error processing file {file}: {e}", flush=True)
-        continue
-
-print(f"✅ Loaded {len(sequences)} valid sequences for training.", flush=True)
-
-# Set the target sequence length (number of frames)
-TARGET_SEQUENCE_LENGTH = 50  
-
-# Determine feature dimension from the first frame of the first sequence
-if sequences and sequences[0]:
-    feature_dim = len(sequences[0][0])
-    print(f"Determined feature dimension: {feature_dim}", flush=True)
-else:
-    print("❌ No valid sequence frames found.", flush=True)
-    sys.exit(1)
-
-# Pad (or truncate) each sequence to the target length.
-print("Padding sequences...", flush=True)
+# Load JSON mapping for video IDs to gloss labels
 try:
-    X = pad_sequences(
-        sequences,
-        maxlen=TARGET_SEQUENCE_LENGTH,
-        padding='post',
-        truncating='post',
-        dtype='float32'
-    )
-except MemoryError as me:
-    print("Memory error during padding:", me, flush=True)
+    with open(JSON_PATH, "r") as json_file:
+        json_data = json.load(json_file)
+except Exception as e:
+    print("❌ ERROR loading JSON file:", e)
     sys.exit(1)
 
-print("Padded sequences shape:", X.shape, flush=True)
+# Build mapping: video_id (str) -> gloss
+videoid_to_gloss = {}
+for entry in json_data:
+    gloss = entry.get("gloss")
+    instances = entry.get("instances", [])
+    for inst in instances:
+        video_id = str(inst.get("video_id")).zfill(5)  # Zero-pad if needed
+        if video_id not in videoid_to_gloss:
+            videoid_to_gloss[video_id] = gloss
 
-# Convert labels to a numpy array
-y = np.array(labels)
-print(f"y shape before one-hot: {y.shape}", flush=True)
+# Build mapping: gloss -> integer label
+gloss_set = set(videoid_to_gloss.values())
+gloss_to_label = {gloss: idx for idx, gloss in enumerate(sorted(gloss_set))}
+NUM_CLASSES = len(gloss_to_label)
+print(f"Using {NUM_CLASSES} unique classes.", flush=True)
 
-# Determine the number of unique classes dynamically
-num_classes = len(np.unique(y))
-print(f"📊 Detected {num_classes} unique classes.", flush=True)
+# Create a list of valid files and their labels
+all_files = sorted([f for f in os.listdir(DATA_PATH) if f.endswith(".npy")])
+file_list = []
+label_list = []
+for f in all_files:
+    video_id = os.path.splitext(f)[0]  # Filename without extension
+    if video_id not in videoid_to_gloss:
+        print(f"Skipping {f}: video_id not found in JSON mapping.", flush=True)
+        continue
+    gloss = videoid_to_gloss[video_id]
+    label = gloss_to_label[gloss]
+    file_list.append(f)
+    label_list.append(label)
+    
+print(f"Found {len(file_list)} files with valid labels.", flush=True)
 
-# Convert labels to one-hot encoding
-y = to_categorical(y, num_classes=num_classes)
-print(f"✅ y after one-hot encoding: {y.shape}", flush=True)
+# Define a generator class using Keras Sequence
+class DataGenerator(Sequence):
+    def __init__(self, file_list, labels, batch_size, data_path, target_len, expected_features, num_classes):
+        self.file_list = file_list
+        self.labels = labels
+        self.batch_size = batch_size
+        self.data_path = data_path
+        self.target_len = target_len
+        self.expected_features = expected_features
+        self.num_classes = num_classes
 
-# The padded X has shape (num_samples, TARGET_SEQUENCE_LENGTH, feature_dim)
-input_shape = (X.shape[1], X.shape[2])
+    def __len__(self):
+        return int(np.ceil(len(self.file_list) / self.batch_size))
+
+    def __getitem__(self, index):
+        batch_files = self.file_list[index*self.batch_size:(index+1)*self.batch_size]
+        batch_labels = self.labels[index*self.batch_size:(index+1)*self.batch_size]
+        batch_sequences = []
+        for f in batch_files:
+            try:
+                seq = np.load(os.path.join(self.data_path, f), allow_pickle=True)
+                # Validate sequence shape
+                if seq.ndim != 2 or seq.shape[1] != self.expected_features:
+                    print(f"Skipping {f} in generator: Invalid shape {seq.shape}", flush=True)
+                    continue
+                # Convert to float32
+                np_seq = np.asarray(seq, dtype='float32')
+                batch_sequences.append(np_seq.tolist())
+            except Exception as e:
+                print(f"Error loading {f} in generator: {e}", flush=True)
+                continue
+        if not batch_sequences:
+            # If no valid data in this batch, return zeros (or handle differently)
+            X_batch = np.zeros((self.batch_size, self.target_len, self.expected_features), dtype='float32')
+            y_batch = to_categorical(np.zeros(self.batch_size, dtype=int), num_classes=self.num_classes)
+        else:
+            X_batch = pad_sequences(
+                batch_sequences,
+                maxlen=self.target_len,
+                padding='post',
+                truncating='post',
+                dtype='float32'
+            )
+            # Adjust y_batch length if some files were skipped
+            y_batch = to_categorical(np.array(batch_labels[:X_batch.shape[0]]), num_classes=self.num_classes)
+        return X_batch, y_batch
+
+# Parameters for the generator
+BATCH_SIZE = 8
+generator = DataGenerator(file_list, label_list, BATCH_SIZE, DATA_PATH, TARGET_SEQUENCE_LENGTH, EXPECTED_FEATURES, NUM_CLASSES)
+steps_per_epoch = len(generator)
+print(f"Generator will yield {steps_per_epoch} steps per epoch.", flush=True)
+
+# Build the model using shape from generator
+input_shape = (TARGET_SEQUENCE_LENGTH, EXPECTED_FEATURES)
 print(f"Input shape for model: {input_shape}", flush=True)
+model = create_lstm_model(input_shape, NUM_CLASSES)
 
-# Build the LSTM model
-print("🛠️ Building LSTM model...", flush=True)
-model = create_lstm_model(input_shape, num_classes)
-
-print(f"📈 Training model with X shape {X.shape} and y shape {y.shape}...", flush=True)
+print("🛠️ Starting model training...", flush=True)
 history = model.fit(
-    X, y,
-    validation_split=0.2,
-    epochs=10,       
-    batch_size=8,
+    generator,
+    epochs=10,
     verbose=2
 )
 
-# Ensure the models directory exists
 os.makedirs("models", exist_ok=True)
-
-# Save the trained model (using the native Keras format)
 model.save("models/lstm_model.keras")
 print("✅ Model training complete. Saved to models/lstm_model.keras", flush=True)
