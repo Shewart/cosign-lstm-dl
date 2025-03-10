@@ -1,25 +1,25 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
 
 def create_lstm_model(input_shape, num_classes):
     """
-    Create and return an LSTM model for sign language recognition.
+    Create and return a bidirectional LSTM model for sign language recognition.
     
     Parameters:
         input_shape (tuple): Shape of the input data (time_steps, features)
-        num_classes (int): Number of classification categories.
-
+        num_classes (int): Number of classification categories
+    
     Returns:
-        model (tf.keras.Model): Compiled LSTM model.
+        model (tf.keras.Model): Compiled LSTM model
     """
     model = Sequential([
-        LSTM(128, return_sequences=True, activation='relu', input_shape=input_shape),
+        Bidirectional(LSTM(128, return_sequences=True, activation='relu'), input_shape=input_shape),
         Dropout(0.2),
-        LSTM(64, return_sequences=False),
+        Bidirectional(LSTM(64, return_sequences=False, activation='relu')),
         Dropout(0.2),
         Dense(64, activation='relu'),
-        Dense(num_classes, activation='softmax')  # Dynamically set num_classes
+        Dense(num_classes, activation='softmax')
     ])
     
     model.compile(
@@ -31,9 +31,8 @@ def create_lstm_model(input_shape, num_classes):
     return model
 
 if __name__ == "__main__":
-    # Example input shape: (sequence_length, num_features)
-    INPUT_SHAPE = (30, 1662)  # Assuming 1662 features from MediaPipe
-    NUM_CLASSES = 30  # Placeholder, actual num_classes will be determined in train.py
-
+    # Example input shape (sequence_length, num_features)
+    INPUT_SHAPE = (50, 1629)  # For instance, 50 frames per sequence and 1629 features per frame
+    NUM_CLASSES = 10  # Change based on your actual mapping
     model = create_lstm_model(INPUT_SHAPE, NUM_CLASSES)
     model.summary()
