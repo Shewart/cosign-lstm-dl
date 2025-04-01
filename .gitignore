@@ -42,6 +42,7 @@ __pycache__/
 *.pyc
 *.pkl
 data/
+processed_vids/
 
 models/*.h5
 models/*.keras
