@@ -47,4 +47,10 @@ processed_vids/
 models/*.h5
 models/*.keras
 .env
+.venv
+venv/
+# MediaPipe
+mediapipe/
 
+# TensorFlow
+tensorflow/

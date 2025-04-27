@@ -6,8 +6,8 @@ import sys
 from speech_to_text import recognize_speech
 from text_to_speech import speak_text
 
-# Import the extract_keypoints function from data_preprocessing
-from data_preprocessing import extract_keypoints
+# Import the extract_keypoints function from data_preprocessing_fixed
+from data_preprocessing_fixed import extract_keypoints
 
 def sign_to_speech():
     """
@@ -15,7 +15,7 @@ def sign_to_speech():
     and converts the prediction into audible speech.
     """
     # Load the trained model
-    MODEL_PATH = "models/lstm_model.keras"
+    MODEL_PATH = "models/lstm_model.h5"
     try:
         model = tf.keras.models.load_model(MODEL_PATH)
     except Exception as e:
