@@ -1,0 +1,7 @@
+{
+  "model_type": "advanced_cnn_lstm",
+  "batch_size": 4,
+  "epochs": 50,
+  "learning_rate": 5e-05,
+  "description": "Fine-tuning pre-trained model"
+}

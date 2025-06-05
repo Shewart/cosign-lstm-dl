@@ -1,0 +1,7 @@
+{
+  "model_type": "basic_cnn_lstm",
+  "batch_size": 16,
+  "epochs": 50,
+  "learning_rate": 0.0001,
+  "description": "Basic CNN-LSTM training for comparison"
+}

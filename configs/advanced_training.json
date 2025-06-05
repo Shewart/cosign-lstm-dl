@@ -1,0 +1,7 @@
+{
+  "model_type": "advanced_cnn_lstm",
+  "batch_size": 8,
+  "epochs": 100,
+  "learning_rate": 0.0001,
+  "description": "Advanced body-part-aware CNN-LSTM training"
+}
