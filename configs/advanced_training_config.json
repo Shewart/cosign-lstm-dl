@@ -1,0 +1,89 @@
+{
+  "experiment_name": "advanced_cnn_lstm_asl_recognition",
+  "description": "Advanced CNN-LSTM hybrid for ASL recognition - Dissertation quality training",
+  
+  "model": {
+    "type": "AdvancedCNNLSTM",
+    "sequence_length": 30,
+    "num_classes": 26,
+    "input_shape": [30, 1629],
+    "attention_heads": 8,
+    "lstm_units": [512, 256, 128],
+    "cnn_filters": {
+      "face": [32, 64, 128],
+      "pose": [64, 128],
+      "hands": [64, 128, 256]
+    }
+  },
+  
+  "training": {
+    "batch_size": 16,
+    "epochs": 100,
+    "validation_split": 0.2,
+    "early_stopping_patience": 15,
+    "reduce_lr_patience": 7,
+    "initial_lr": 0.001,
+    "min_lr": 1e-6,
+    "weight_decay": 0.01,
+    "gradient_clip_norm": 1.0
+  },
+  
+  "optimizer": {
+    "type": "AdamW",
+    "learning_rate": 0.001,
+    "weight_decay": 0.01,
+    "beta_1": 0.9,
+    "beta_2": 0.999,
+    "epsilon": 1e-8
+  },
+  
+  "data": {
+    "train_path": "data/train",
+    "validation_path": "data/validation", 
+    "test_path": "data/test",
+    "augmentation": {
+      "enabled": true,
+      "augmentation_factor": 0.3,
+      "noise_std": 0.01,
+      "time_stretch_range": [0.9, 1.1],
+      "rotation_range": 0.1
+    },
+    "preprocessing": {
+      "normalization": true,
+      "feature_scaling": "standard",
+      "sequence_padding": "zero",
+      "outlier_removal": true
+    }
+  },
+  
+  "logging": {
+    "save_best_only": true,
+    "monitor": "val_accuracy",
+    "mode": "max",
+    "verbose": 1,
+    "log_frequency": 1,
+    "tensorboard": {
+      "enabled": true,
+      "histogram_freq": 1,
+      "write_graph": true,
+      "write_images": true
+    },
+    "metrics_to_track": [
+      "accuracy",
+      "loss", 
+      "val_accuracy",
+      "val_loss",
+      "top_3_accuracy",
+      "precision",
+      "recall",
+      "f1_score"
+    ]
+  },
+  
+  "targets": {
+    "min_accuracy": 70.0,
+    "target_accuracy": 75.0,
+    "dissertation_quality": true,
+    "real_time_capable": true
+  }
+}
