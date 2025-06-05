@@ -71,7 +71,8 @@ wheels/
 
 # === DATASETS & PROCESSED FILES ===
 # Raw datasets
-data/raw/
+data/wlasl-video/raw_videos
+data/wlasl-video/processed_keypoints
 datasets/
 videos/
 images/
