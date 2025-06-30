@@ -1,5 +1,5 @@
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -36,14 +36,91 @@ out/
 .vscode-test/
 .yarn/
 
-# Python-specific
+# === PYTHON & ML SPECIFIC ===
+# Virtual Environments
+ml_env/
+.ml_env
 model-env/
-__pycache__/
-*.pyc
-*.pkl
-data/
+.env
+.venv
+venv/
+env/
+ENV/
 
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# === DATASETS & PROCESSED FILES ===
+# Raw datasets
+data/wlasl-video/raw_videos
+data/wlasl-video/processed_keypoints
+datasets/
+videos/
+images/
+
+# Processed data
+data/processed/
+data/preprocessed/
+processed_data/
+processed_vids/
+
+# Model outputs
 models/*.h5
 models/*.keras
-.env
+models/*.pkl
+models/*.joblib
+models/*.pt
+models/*.pth
+models/*.onnx
+checkpoints/
 
+# === TRAINING & RESULTS ===
+# Training logs
+logs/
+tensorboard/
+wandb/
+mlruns/
+
+# Results and outputs
+results/outputs/
+results/plots/
+results/reports/
+outputs/
+
+# === TEMP & CACHE FILES ===
+*.tmp
+*.cache
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# === MEDIAPIPE & FRAMEWORKS ===
+mediapipe/
+tensorflow/

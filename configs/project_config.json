@@ -1,0 +1,71 @@
+{
+  "project_name": "Advanced CNN-LSTM Sign Language Recognition",
+  "version": "2.0.0",
+  "author": "Your Name",
+  "description": "Advanced CNN-LSTM hybrid model for real-time ASL recognition",
+  "dissertation_chapter": "Implementation and Results",
+  "model": {
+    "architecture": "advanced_cnn_lstm_hybrid",
+    "input_shape": [
+      50,
+      1629
+    ],
+    "sequence_length": 50,
+    "expected_features": 1629,
+    "body_parts": {
+      "pose": {
+        "start": 0,
+        "end": 132,
+        "description": "33 pose keypoints \u00d7 4 features"
+      },
+      "left_hand": {
+        "start": 132,
+        "end": 195,
+        "description": "21 left hand keypoints \u00d7 3 features"
+      },
+      "right_hand": {
+        "start": 195,
+        "end": 258,
+        "description": "21 right hand keypoints \u00d7 3 features"
+      },
+      "face": {
+        "start": 258,
+        "end": 1629,
+        "description": "468 face keypoints \u00d7 3 features"
+      }
+    }
+  },
+  "training": {
+    "batch_size": 8,
+    "epochs": 100,
+    "learning_rate": 0.0001,
+    "validation_split": 0.2,
+    "early_stopping_patience": 15,
+    "reduce_lr_patience": 7,
+    "gradient_clipping": 1.0
+  },
+  "data": {
+    "dataset": "WLASL",
+    "raw_path": "data/raw/wlasl-video/",
+    "processed_path": "data/processed/keypoints/",
+    "cleaned_path": "data/cleaned/",
+    "splits_path": "data/splits/"
+  },
+  "evaluation": {
+    "metrics": [
+      "accuracy",
+      "top_5_accuracy",
+      "precision",
+      "recall",
+      "f1_score"
+    ],
+    "target_accuracy": 0.7,
+    "confidence_threshold": 0.75
+  },
+  "inference": {
+    "real_time": true,
+    "fps_target": 30,
+    "buffer_size": 50,
+    "smoothing_frames": 5
+  }
+}
